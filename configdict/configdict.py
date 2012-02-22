@@ -144,6 +144,7 @@ class ConfigDict(DefaultDict):
 
     def parse(self, src):
         cur_sec = '__GLOBAL__'
+        cur_sec_num = 0
         self.clear()
         self['__GLOBAL__'] = Section('__GLOBAL__', self)
 
@@ -152,14 +153,24 @@ class ConfigDict(DefaultDict):
                 continue
             elif line.startswith('['):
                 cur_sec = line[1:-1]
-                if not cur_sec in self:
+                if not cur_sec in self:                    
                     self[cur_sec] = Section(cur_sec, self)
+                else:
+                    if not isinstance(self[cur_sec], list):
+                        self[cur_sec] = [self[cur_sec]]
+                    
+                    self[cur_sec].append(Section(cur_sec, self))
+                    cur_sec_num += 1
             else:
                 mo = re_set_val.match(line)
                 if not mo:
                     raise ValueError('cannot parse: %s' % line)
                 k = self.k_transform(mo.group(1))
-                self[cur_sec][k] = mo.group(2)
+
+                if isinstance(self[cur_sec], list):
+                    self[cur_sec][cur_sec_num][k] = mo.group(2)
+                else:
+                    self[cur_sec][k] = mo.group(2)
 
     def transform (self, k, v):
         '''This is called to transform option values, based on the contents
